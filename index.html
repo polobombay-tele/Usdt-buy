@@ -1,0 +1,31 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BEP-20 USDT Wallet</title>
+<style>
+body{font-family:Arial;margin:0;background:#08120d;color:#eafff0}.wrap{max-width:900px;margin:auto;padding:24px}
+.card{background:#102018;border:1px solid #254a35;border-radius:18px;padding:20px;margin:14px 0}
+input,button{width:100%;padding:13px;border-radius:10px;border:1px solid #31573f;box-sizing:border-box;margin:7px 0;background:#0a160f;color:#fff}
+button{background:#18a85a;border:0;font-weight:700;cursor:pointer}.muted{color:#9db6a5}.mono{font-family:monospace;word-break:break-all}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:650px){.grid{grid-template-columns:1fr}}
+.badge{display:inline-block;padding:6px 10px;border-radius:999px;background:#163c28;color:#6ff0a5}
+</style></head>
+<body><div class="wrap">
+<h1>USDT Wallet <span class="badge" id="network">Loading…</span></h1>
+<p class="muted">Actual BSC token transactions • testnet-first</p>
+<div class="card"><h2>Register</h2><input id="username" placeholder="Username"><input id="password" type="password" placeholder="Password (12+ chars)">
+<button onclick="register()">Create wallet</button><p id="reg"></p></div>
+<div class="grid">
+<div class="card"><h2>Deposit</h2><p class="muted">Minimum: 0.1 USDT</p><div class="mono" id="addr">Create an account first</div><img id="qr" style="max-width:220px;display:block;margin:15px auto"></div>
+<div class="card"><h2>Withdraw</h2><input id="to" placeholder="Recipient BEP-20 address"><input id="amount" type="number" step="0.000001" placeholder="USDT amount"><p class="muted">Fee: 0 USDT</p><button onclick="withdraw()">Withdraw</button><p id="wd"></p></div>
+</div>
+<div class="card"><h2>Balance</h2><h1 id="bal">0 USDT</h1><button onclick="refresh()">Refresh</button><div id="tx"></div></div>
+</div>
+<script>
+let userId=localStorage.getItem("walletUserId");
+async function j(u,o){let r=await fetch(u,o);let x=await r.json();if(!r.ok)throw Error(x.error||"Request failed");return x}
+async function init(){let c=await j("/api/config");document.getElementById("network").textContent=c.network+" • Chain "+c.chainId;if(userId)await refresh()}
+async function register(){try{let x=await j("/api/register",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({username:username.value,password:password.value})});userId=x.userId;localStorage.setItem("walletUserId",userId);reg.textContent="Wallet: "+x.address;await refresh()}catch(e){reg.textContent=e.message}}
+async function refresh(){if(!userId)return;let d=await j("/api/deposit/"+userId);addr.textContent=d.address;qr.src=d.qr;let b=await j("/api/balance/"+userId);bal.textContent=b.creditedBalance+" USDT";let t=await j("/api/transactions/"+userId);tx.innerHTML=t.map(x=>`<p>${x.type} — ${x.amount} USDT — ${x.status} — ${x.txHash||""}</p>`).join("")||"<p class='muted'>No transactions yet.</p>"}
+async function withdraw(){try{let x=await j("/api/withdraw",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({userId,to:document.getElementById("to").value,amount:document.getElementById("amount").value})});wd.innerHTML="Submitted: <a style='color:#6ff0a5' href='"+x.explorer+"' target='_blank'>View transaction</a>";await refresh()}catch(e){wd.textContent=e.message}}
+init();
+</script></body></html>
